@@ -7,7 +7,7 @@ export default Service.extend(AresConfig, {
     flashMessages: service(),
     session: service(),
     router: service(),
-    
+
     portalUrl() {
       var base;
       let protocol = this.httpsEnabled ? 'https' : 'http';
@@ -19,11 +19,17 @@ export default Service.extend(AresConfig, {
       }
       return base;
     },
-    
+
     serverUrl(route) {
         var base;
         let protocol = this.httpsEnabled ? 'https' : 'http';
-        
+        if ( location.protocol === 'https:') {
+          protocol = 'https';
+        }
+        else {
+          protocol = 'http';
+        }
+
         if (this.apiProxyEnabled) {
           if (`${this.webPortalPort}` === '80') {
             base = `${protocol}://${this.mushHost}/api`;
@@ -31,7 +37,7 @@ export default Service.extend(AresConfig, {
           else {
             base = `${protocol}://${this.mushHost}:${this.webPortalPort}/api`;
           }
-        } 
+        }
         else {
           base = `${protocol}://${this.mushHost}:${this.apiPort}`;
         }
@@ -41,23 +47,23 @@ export default Service.extend(AresConfig, {
             return base;
         }
     },
-    
+
     reportError(error) {
       try {
         if (error.message === 'TransitionAborted') {
           return;
         }
         console.log(error);
-        
+
         let err = new Error();
-        $.post(this.serverUrl("request"), 
+        $.post(this.serverUrl("request"),
                 {
                     cmd: 'webError',
                     args: { error: `${error.message} : ${err.stack}` },
                     api_key: this.apiKey
                 });
                 this.router.transitionTo('error');
-      } catch(ex) { 
+      } catch(ex) {
         try {
           this.router.transitionTo('error');
         }
@@ -66,19 +72,19 @@ export default Service.extend(AresConfig, {
         }
       }
     },
-    
+
     request(cmd, args, allowEpicFail = false) {
-      
+
       if (this.aresconfig === null) {
         return new Promise((resolve, reject) => {
           console.log("Unable to send request - aresconfig is missing.");
           reject( {
             error: "Unable to send request - aresconfig is missing."
-          });  
+          });
         });
       }
-      
-     return $.post(this.serverUrl("request"), 
+
+     return $.post(this.serverUrl("request"),
         {
             cmd: cmd,
             args: args,
@@ -104,7 +110,7 @@ export default Service.extend(AresConfig, {
           }
         });
     },
-    
+
     requestOne(cmd, args = {}, transitionToOnError = 'home', allowEpicFail = false) {
         return this.request(cmd, args, allowEpicFail).then((response) => {
           if (!response) {
@@ -121,7 +127,7 @@ export default Service.extend(AresConfig, {
         });
     },
 
-    requestMany(cmd, args = {}, transitionToOnError = 'home', allowEpicFail = false) {    
+    requestMany(cmd, args = {}, transitionToOnError = 'home', allowEpicFail = false) {
         return this.request(cmd, args, allowEpicFail).then((response) => {
           if (!response) {
             this.reportError({ message: `No response from game for ${cmd}.` });
@@ -135,6 +141,6 @@ export default Service.extend(AresConfig, {
             }
             return response.map(r => EmberObject.create(r));
         });
-    }    
-    
+    }
+
 });

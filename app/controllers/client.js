@@ -24,7 +24,7 @@ export default Controller.extend(AresConfig, {
     this.set('history1', []);
     this.set('history2', []);
   },
-      
+
   idleKeepalive: function() {
     if (this.connected) {
       this.sendInput("keepalive");
@@ -33,10 +33,10 @@ export default Controller.extend(AresConfig, {
       clearInterval(this.keepaliveInterval);
     }
   },
-    
+
   onMessage: function(evt) {
     var data;
-        
+
     try
     {
       data = JSON.parse(evt.data);
@@ -45,28 +45,28 @@ export default Controller.extend(AresConfig, {
     {
       data = null;
     }
-        
+
     if (!data) {
       return;
     }
-        
+
     var notification_type = data.args.notification_type;
-        
+
     if (notification_type != "webclient_output") {
       return;
     }
-        
+
     let html = ansi_up.ansi_to_html(data.args.message);
     this.messages.pushObject(html);
-    this.scrollToBottom();  
+    this.scrollToBottom();
     this.gameSocket.notify("");
   },
   onConnect: function(self) {
     document.getElementById("sendMsg").focus();
-    self.set('connected', true);   
-    self.set('messages', []); 
+    self.set('connected', true);
+    self.set('messages', []);
     self.set('scrollPaused', false);
-        
+
     let cmd = {
       'type': 'identify',
       'data': { 'id': this.charId, 'webclient': true }
@@ -74,35 +74,35 @@ export default Controller.extend(AresConfig, {
     let json = JSON.stringify(cmd);
     this.websocket.send(json);
   },
-    
+
   onDisconnect: function(self) {
     self.set('connected', false);
   },
-    
+
   scrollToBottom: function() {
-    // Unless scrolling paused 
+    // Unless scrolling paused
     if (this.scrollPaused) {
       return;
     }
-      
+
     try {
       $('#console').stop().animate({
         scrollTop: $('#console')[0].scrollHeight + 1000
-      }, 800);           
+      }, 800);
     }
     catch(error) {
       // This happens sometimes when transitioning away from play screen.
-    }      
+    }
   },
-    
+
   showDisconnect: computed('connected', function() {
     return this.connected;
   }),
-    
-  showConnect: computed('connected', function() {  
+
+  showConnect: computed('connected', function() {
     return !this.connected;
   }),
-    
+
   sendInput: function(msg) {
     var cmd, json;
     cmd = {
@@ -115,16 +115,26 @@ export default Controller.extend(AresConfig, {
       socket.send(json);
     }
   },
-    
-    
+
+
   actions: {
     connect() {
       let idle_keepalive_ms = 60000;
       let protocol = this.httpsEnabled ? 'wss' : 'ws';
-      
-      this.set('websocket', new WebSocket(`${protocol}://${this.mushHost}:${this.websocketPort}/websocket`));
+      if (location.protocol === 'https:') {
+        protocol = 'wss';
+      }
+      else {
+        protocol = 'ws';
+      }
+      let socketUrl = `${protocol}://${this.mushHost}:${this.websocketPort}/websocket`;
+      if (this.apiProxyEnabled) {
+        socketUrl = `${protocol}://${location.host}/websocket`;
+      }
+
+      this.set('websocket', new WebSocket(socketUrl));
         var self = this;
-        this.websocket.onmessage = function(evt) { 
+        this.websocket.onmessage = function(evt) {
           self.onMessage(evt);
         };
         this.websocket.onclose = function() {
@@ -133,20 +143,20 @@ export default Controller.extend(AresConfig, {
         this.websocket.onopen = function() {
           self.onConnect(self);
         };
-                
+
         this.set('keepaliveInterval', window.setInterval(function(){ self.idleKeepalive() }, idle_keepalive_ms));
-                
+
       },
       disconnect() {
         if (this.connected){
-          this.sendInput('quit');                    
+          this.sendInput('quit');
         }
       },
       sendMsg1() {
         let cmd = this.text1;
         this.sendInput(cmd);
         this.set('text1', '');
-        this.history1.addObject(cmd); 
+        this.history1.addObject(cmd);
         if (this.history1.length > 10) {
           this.history1.removeAt(0);
         }
@@ -155,7 +165,7 @@ export default Controller.extend(AresConfig, {
         let cmd = this.text2;
         this.sendInput(cmd);
         this.set('text2', '');
-        this.history2.addObject(cmd); 
+        this.history2.addObject(cmd);
         if (this.history2.length > 10) {
           this.history2.removeAt(0);
         }
