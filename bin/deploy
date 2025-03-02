@@ -1,5 +1,9 @@
+#!/usr/bin/env bash
+
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 npm ci --no-audit --no-fund
 ember build --environment production
-cp -R dist/* /var/www/html
+if [ -d /var/www/html ]; then
+  cp -R dist/* /var/www/html
+fi
